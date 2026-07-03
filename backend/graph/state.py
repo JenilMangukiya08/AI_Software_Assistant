@@ -8,3 +8,6 @@ class GraphState(TypedDict):
     route: str
     sources: list[str]
     memory:str
+    plan:list[str]
+    current_step:int
+    history:list[str]

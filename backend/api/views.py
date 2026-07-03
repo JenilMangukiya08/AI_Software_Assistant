@@ -385,17 +385,11 @@ class RepositoryListAPIView(APIView):
         for repo in repositories:
 
             data.append({
-
                 "id": repo.id,
-
                 "name": repo.name,
-
                 "github_url": repo.github_url,
-
                 "uploaded_at": repo.uploaded_at,
-
                 "chat_count": repo.sessions.count()
-
             })
 
         return Response(data)

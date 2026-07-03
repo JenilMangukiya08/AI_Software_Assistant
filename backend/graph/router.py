@@ -1,39 +1,53 @@
-import os
-from dotenv import load_dotenv
-from langchain_groq import ChatGroq
-from graph.prompts import ROUTER_PROMPT
-
-load_dotenv()
-
-llm = ChatGroq(
-    api_key=os.getenv("GROQ_API_KEY"),
-    model="llama-3.3-70b-versatile",
-    temperature=0
+from graph.nodes import (
+    repository_node,
+    documentation_node,
+    review_node,
+    bug_node,
+    test_node
 )
+
+from tools.tool_router import select_tool
 
 
 def router_node(state):
 
-    question = state["question"]
+    step = state["plan"][state["current_step"]]
 
-    response = llm.invoke(
+    # -------------------
+    # AGENTS
+    # -------------------
 
-        f"""
-{ROUTER_PROMPT}
+    if step == "repository":
+        return repository_node(state)
 
-Question:
+    elif step == "documentation":
+        return documentation_node(state)
 
-{question}
-"""
+    elif step == "review":
+        return review_node(state)
+
+    elif step == "bug":
+        return bug_node(state)
+
+    elif step == "test":
+        return test_node(state)
+
+    # -------------------
+    # TOOLS
+    # -------------------
+
+    result, sources = select_tool(
+
+        repository=state["repository"],
+
+        question=state["question"],
+
+        forced_tool=step
 
     )
 
-    intent = response.content.strip().lower()
+    state["answer"] = result
 
-    return {
+    state["sources"].extend(sources)
 
-        **state,
-
-        "intent": intent
-
-    }
+    return state
