@@ -12,7 +12,9 @@ from .views import (
     ProfileAPIView,
     RepositoryListAPIView,
     RepositoryStatsAPIView,
-    DeleteRepositoryAPIView
+    DeleteRepositoryAPIView,
+    DashboardAPIView,
+    DebugAPIView
     )
 
 urlpatterns = [
@@ -79,4 +81,14 @@ urlpatterns = [
         "repositories/<int:repository_id>/delete/",
         DeleteRepositoryAPIView.as_view()
     ),
+
+    path(
+        "dashboard/",
+        DashboardAPIView.as_view()
+    ),
+
+    path(
+    "debug/",
+    DebugAPIView.as_view()
+),
 ]

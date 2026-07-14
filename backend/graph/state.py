@@ -11,3 +11,6 @@ class GraphState(TypedDict):
     plan:list[str]
     current_step:int
     history:list[str]
+    current_file: str
+    trace: list
+    metrics: dict

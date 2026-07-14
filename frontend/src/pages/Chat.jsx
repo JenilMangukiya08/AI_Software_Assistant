@@ -15,20 +15,37 @@ export default function Chat() {
     const [tree, setTree] = useState({});
     const [loading, setLoading] = useState(false);
     const [stats,setStats]=useState({});
+    const [debug, setDebug] = useState(null);
     const loadConversation = async (id) => {
-        try {
-            const response = await API.get(`history/${id}/`);
-            setMessages(response.data.messages);
-            localStorage.setItem("session_id", id);
-        }
-        catch (error) {
-            console.error(error);
-        }
-    };
+
+    try {
+
+        const response = await API.get(`history/${id}/`);
+
+        setMessages(response.data.messages);
+
+        setSessionId(id);                 // ⭐ VERY IMPORTANT
+
+        localStorage.setItem("session_id", id);
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+    }
+
+};
     const [repositories, setRepositories] = useState([]);
     const [selectedRepo, setSelectedRepo] = useState(
         localStorage.getItem("repository") || ""
     );
+    const [sessionId, setSessionId] = useState(
+
+    localStorage.getItem("session_id") || null
+
+);
 
     
     
@@ -128,8 +145,19 @@ export default function Chat() {
 
             const response = await API.post("chat/", {
                 repository,
-                question
+                question,
+                session_id: sessionId
             });
+            setDebug(response.data.debug);
+
+            if (!sessionId && response.data.session_id) {
+                setSessionId(response.data.session_id);
+
+                localStorage.setItem(
+                "session_id",
+                response.data.session_id
+            );
+        }
 
             console.log(response.data);
             console.log(typeof response.data.answer);
@@ -242,7 +270,15 @@ export default function Chat() {
                     
                     <button
                         className="clear-chat"
-                        onClick={() => setMessages([])}
+                        onClick={() => {
+
+                            setMessages([]);
+
+                            setSessionId(null);
+
+                            localStorage.removeItem("session_id");
+
+                        }}
                     >
                         🗑 Clear Chat
                     </button>

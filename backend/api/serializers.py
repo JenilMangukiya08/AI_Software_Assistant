@@ -6,9 +6,15 @@ class RepositorySerializer(serializers.Serializer):
     url = serializers.URLField()
 
 class ChatSerializer(serializers.Serializer):
-    repository=serializers.CharField()
+
+    repository = serializers.CharField()
+
     question = serializers.CharField()
-    session_id = serializers.IntegerField(required=False)
+
+    session_id = serializers.IntegerField(
+        required=False,
+        allow_null=True
+    )
     
 
 

@@ -14,56 +14,132 @@ llm = ChatGroq(
 )
 
 
-
 from langchain_core.prompts import ChatPromptTemplate
 
 prompt = ChatPromptTemplate.from_template("""
-You are an expert software engineer who explains GitHub repositories.
+You are an expert Software Engineer specialized in understanding GitHub repositories.
 
-You are given one or more source files.
-Conversation History
---------------------
+Your job is to answer questions accurately using BOTH the repository context and the conversation history.
+
+========================================================
+CONVERSATION HISTORY
+========================================================
+
 {memory}
-                                          
-Repository Context:
-------------------
+
+========================================================
+REPOSITORY CONTEXT
+========================================================
+
 {context}
 
-User Question:
+========================================================
+CURRENT QUESTION
+========================================================
+
 {question}
 
-Rules:
+========================================================
+INSTRUCTIONS
+========================================================
 
-1. If the repository context contains a file whose path matches the requested filename, assume that IS the requested file.
+1. Repository Context is your PRIMARY source of truth.
 
-2. Never answer:
-"There is no workflow.py file..."
-"There is no state.py file..."
-"There is no planner.py file..."
-if the file path exists in the context.
+2. Conversation History is ONLY used to understand follow-up questions.
 
-3. Explain:
-- the purpose of the file
-- important classes/functions
-- workflow
-- how it interacts with other files
+Examples:
 
-4. Base your answer ONLY on the repository context.
-5. Answer using BOTH the conversation history and the repository context.
-6. If the question refers to "this", "that", "it", "the function", etc.,
-use the conversation history to determine what the user is referring to.
-                                          
-Return the answer in Markdown.
+User:
+Explain workflow.py
+
+User:
+Why is planner before router?
+
+→ "planner" refers to workflow.py.
+
+----------------------------------------
+
+User:
+Explain planner.py
+
+User:
+How do these two files interact?
+
+→ "these two files" refers to
+workflow.py and planner.py.
+
+----------------------------------------
+
+3. If the current question refers to:
+
+- it
+- this
+- that
+- they
+- these
+- those
+- the function
+- the file
+- planner
+- router
+
+use the conversation history to identify what the user means.
+
+4. Never restart the explanation if this is a follow-up question.
+
+Instead of saying:
+
+"workflow.py defines..."
+
+say:
+
+"As discussed earlier, workflow.py..."
+
+5. Never invent classes,
+functions,
+files,
+or architecture.
+
+If the repository context does not contain enough information,
+say:
+
+"I couldn't find enough information in the repository."
+
+6. Explain only what is supported by the repository context.
+
+7. Mention filenames whenever possible.
+
+8. If multiple files are involved,
+explain how they interact.
+
+9. If reviewing code,
+
+always provide:
+
+• Observation
+
+• Evidence from the code
+
+• Recommendation
+
+Do not provide generic software engineering advice.
+
+10. Return the answer in clean Markdown.
+
 """)
+
 def ask_repository(repository, question, memory=""):
 
-    if memory:
-        search_query = memory + "\n\nCurrent Question:\n" + question
-
+    # Retrieval should only use the current question
     context, sources = retrieve_context(
         repository,
-        search_query
+        question
     )
+
+    print("=" * 80)
+    print("MEMORY")
+    print(memory)
+    print("=" * 80)
 
     print("=" * 80)
     print("CONTEXT")
@@ -83,9 +159,13 @@ def ask_repository(repository, question, memory=""):
             break
 
     response = chain.invoke({
+
         "filename": filename,
+
         "memory": memory,
+
         "context": context,
+
         "question": question
 
     })

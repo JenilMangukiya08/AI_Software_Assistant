@@ -1,16 +1,47 @@
 import ReactMarkdown from "react-markdown";
-import { CopyToClipboard } from "react-copy-to-clipboard";
-import { FaCopy } from "react-icons/fa";
+import MermaidDiagram from "./MermaidDiagram";
 
-export default function Message({ sender, text, time,sources }) {
+export default function Message({ sender, text, time, sources }) {
+
+    const mermaidMatch = text.match(
+        /```mermaid\s*([\s\S]*?)```/
+    );
+
+    const mermaidCode = mermaidMatch
+        ? mermaidMatch[1].trim()
+        : null;
+
+    const markdownText = mermaidMatch
+        ? text.replace(mermaidMatch[0], "").trim()
+        : text;
+
+    const isMermaid = mermaidCode !== null;
 
     return (
 
         <div className={`message ${sender}`}>
 
-            <ReactMarkdown>
-                {text}
-            </ReactMarkdown>
+            {
+            sender === "ai" && isMermaid ? (
+
+                <>
+                    <MermaidDiagram chart={mermaidCode} />
+
+                    {markdownText && (
+                        <ReactMarkdown>
+                            {markdownText}
+                        </ReactMarkdown>
+                    )}
+                </>
+
+            ) : (
+
+                <ReactMarkdown>
+                    {text}
+                </ReactMarkdown>
+
+            )
+        }
 
             {
                 sender === "ai" &&
@@ -35,54 +66,52 @@ export default function Message({ sender, text, time,sources }) {
 
                 )
             }
+
             <div className="message-actions">
 
-    {
-        sender === "ai" && (
+                {
+                    sender === "ai" && (
 
-            <>
-                <button
-                    className="copy-btn"
-                    onClick={() => navigator.clipboard.writeText(text)}
-                >
-                    📋 Copy
-                </button>
+                        <>
+                            <button
+                                className="copy-btn"
+                                onClick={() => navigator.clipboard.writeText(text)}
+                            >
+                                📋 Copy
+                            </button>
 
-                <button
-                    className="download-btn"
-                    onClick={() => {
+                            <button
+                                className="download-btn"
+                                onClick={() => {
 
-                        const blob = new Blob(
-                            [text],
-                            { type: "text/markdown" }
-                        );
+                                    const blob = new Blob(
+                                        [text],
+                                        { type: "text/markdown" }
+                                    );
 
-                        const url = URL.createObjectURL(blob);
+                                    const url = URL.createObjectURL(blob);
 
-                        const a = document.createElement("a");
+                                    const a = document.createElement("a");
 
-                        a.href = url;
+                                    a.href = url;
+                                    a.download = "answer.md";
 
-                        a.download = "answer.md";
+                                    a.click();
 
-                        a.click();
+                                    URL.revokeObjectURL(url);
 
-                        URL.revokeObjectURL(url);
+                                }}
+                            >
+                                ⬇ Download
+                            </button>
+                        </>
 
-                    }}
-                >
-                    ⬇ Download
-                </button>
+                    )
+                }
 
-            </>
-
-        )
-    }
-
-</div>
+            </div>
 
             <small>{time}</small>
-            
 
         </div>
 

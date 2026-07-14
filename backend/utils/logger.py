@@ -9,8 +9,23 @@ LOG_FILE = os.path.join(LOG_DIR, "execution_logs.json")
 
 os.makedirs(LOG_DIR, exist_ok=True)
 
+execution_trace = []
+def log_execution(step, state, status, details=""):
+    execution_trace.append({
+        "step": step,
+        "status": status,
+        "details": details,
+        "time": datetime.now().strftime("%H:%M:%S")
+    })
 
-def log_execution(step, state, status="success", details=""):
+    print("="*60)
+    print("TIME :", datetime.now())
+    print("STEP :", step)
+    print("STATUS :", status)
+    print("QUESTION :", state.get("question"))
+    print("LAST AGENT :", state.get("last_agent"))
+    print("DETAILS :", details)
+    print("="*60)
 
     log = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),

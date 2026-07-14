@@ -1,5 +1,4 @@
 import os
-import re
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -16,8 +15,16 @@ SUPPORTED_EXTENSIONS = {
     ".c",
     ".cs",
     ".go",
-    ".php"
+    ".php",
 }
+
+
+def normalize(text):
+    return (
+        text.lower()
+        .replace(" ", "_")
+        .replace("-", "_")
+    )
 
 
 def search_code(repository, query):
@@ -27,8 +34,9 @@ def search_code(repository, query):
     results = []
 
     if not repo_path.exists():
-
         return results
+
+    normalized_query = normalize(query)
 
     for root, _, files in os.walk(repo_path):
 
@@ -39,25 +47,74 @@ def search_code(repository, query):
 
             filepath = os.path.join(root, file)
 
+            relative_path = os.path.relpath(filepath, repo_path)
+
             try:
 
                 with open(filepath, "r", encoding="utf-8") as f:
 
-                    for line_no, line in enumerate(f, start=1):
+                    lines = f.readlines()
 
-                        if re.search(re.escape(query), line, re.IGNORECASE):
+                for line_no, line in enumerate(lines):
 
-                            results.append({
+                    normalized_line = normalize(line)
 
-                                "file": os.path.relpath(filepath, repo_path),
+                    if normalized_query not in normalized_line:
+                        continue
 
-                                "line": line_no,
+                    ##################################################
+                    # Score
+                    ##################################################
 
-                                "content": line.strip()
+                    score = 0
 
-                            })
+                    # Exact line match
+                    if normalized_query == normalized_line.strip():
+                        score += 100
+
+                    # Function definition
+                    if f"def {normalized_query}" in normalized_line:
+                        score += 500
+
+                    # Class definition
+                    if f"class {normalized_query}" in normalized_line:
+                        score += 500
+
+                    # Filename match
+                    if normalized_query in normalize(file):
+                        score += 200
+
+                    # General text match
+                    score += 20
+
+                    ##################################################
+                    # Context
+                    ##################################################
+
+                    start = max(0, line_no - 3)
+                    end = min(len(lines), line_no + 4)
+
+                    snippet = "".join(lines[start:end])
+
+                    results.append(
+                        {
+                            "file": relative_path,
+                            "line": line_no + 1,
+                            "content": snippet,
+                            "score": score,
+                        }
+                    )
 
             except Exception:
-                pass
+                continue
 
-    return results
+    ##################################################
+    # Sort by relevance
+    ##################################################
+
+    results.sort(
+        key=lambda x: x["score"],
+        reverse=True,
+    )
+
+    return results[:10]

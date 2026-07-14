@@ -9,6 +9,7 @@ from graph.nodes import (
     bug_node,
     test_node
 )
+from graph.synthesizer import synthesizer_node
 
 
 builder = StateGraph(GraphState)
@@ -20,6 +21,7 @@ builder.add_node("documentation", documentation_node)
 builder.add_node("review", review_node)
 builder.add_node("bug", bug_node)
 builder.add_node("test", test_node)
+builder.add_node("synthesizer",synthesizer_node)
 
 builder.set_entry_point("planner")
 builder.add_edge("planner","executor")

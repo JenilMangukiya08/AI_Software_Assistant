@@ -6,7 +6,7 @@ from graph.nodes import (
     test_node
 )
 
-from tools.tool_router import select_tool
+from tools.tool_router import execute_tool
 
 
 def router_node(state):
@@ -18,36 +18,52 @@ def router_node(state):
     # -------------------
 
     if step == "repository":
-        return repository_node(state)
+        result = repository_node(state)
+        result["last_agent"]="repository"
+        return result
 
     elif step == "documentation":
-        return documentation_node(state)
-
+        result = documentation_node(state)
+        result["last_agent"]="documentation"
+        return result
+    
     elif step == "review":
-        return review_node(state)
+        result = review_node(state)
+        result["last_agent"]="review"
+        return result
 
     elif step == "bug":
-        return bug_node(state)
+        result = bug_node(state)
+        result["last_agent"]="bug"
+        return result
 
     elif step == "test":
-        return test_node(state)
+        result = test_node(state)
+        result["last_agent"]="test"
+        return result
 
     # -------------------
     # TOOLS
     # -------------------
 
-    result, sources = select_tool(
-
+    result, sources = execute_tool(
         repository=state["repository"],
-
         question=state["question"],
-
         forced_tool=step
-
     )
 
-    state["answer"] = result
+    history = state.get("history", [])
 
-    state["sources"].extend(sources)
+    history.append({
+        "agent": step,
+        "question": state["question"],
+        "answer": result,
+        "sources": sources
+    })
+
+    state["history"] = history
+    state["answer"] = result
+    state["last_agent"] = step
+    state["sources"] = sources
 
     return state

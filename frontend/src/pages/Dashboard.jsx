@@ -1,7 +1,29 @@
+import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import StatCard from "../components/StatCard";
+import API from "../services/api";
 
 export default function Dashboard() {
+
+    const [stats, setStats] = useState({
+        repositories: 0,
+        sessions: 0,
+        messages: 0,
+        answers: 0,
+        top_repository: "-"
+    });
+
+    useEffect(() => {
+
+        API.get("dashboard/")
+            .then((response) => {
+
+                setStats(response.data);
+
+            })
+            .catch(console.error);
+
+    }, []);
 
     return (
 
@@ -13,31 +35,31 @@ export default function Dashboard() {
 
                 <StatCard
                     title="Repositories"
-                    value="1"
+                    value={stats.repositories}
                 />
 
                 <StatCard
-                    title="Documents"
-                    value="320"
+                    title="Conversations"
+                    value={stats.sessions}
                 />
 
                 <StatCard
-                    title="Chats"
-                    value="15"
+                    title="Messages"
+                    value={stats.messages}
                 />
 
                 <StatCard
                     title="AI Answers"
-                    value="54"
+                    value={stats.answers}
                 />
 
             </div>
 
-            <h2>Recent Repository</h2>
+            <h2>Most Used Repository</h2>
 
             <div className="repository">
 
-                AI_ROUTE_PLANNER
+                {stats.top_repository}
 
             </div>
 

@@ -18,6 +18,8 @@ from .models import Repository,ChatSession,ChatMessage
 from .serializers import ChatSessionSerializer
 from rag.chroma_store import ChromaVectorStore
 from rag.memory import get_memory
+from django.shortcuts import get_object_or_404
+from django.db.models import Count
 
 
 import shutil
@@ -66,9 +68,8 @@ class RepositoryUploadView(APIView):
 
 
 class ChatAPIView(APIView):
-    permission_classes=[
-        IsAuthenticated
-    ]
+
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
 
@@ -77,53 +78,122 @@ class ChatAPIView(APIView):
         serializer = ChatSerializer(data=request.data)
 
         if not serializer.is_valid():
+
             print("Serializer Errors:", serializer.errors)
+
             return Response(serializer.errors, status=400)
 
         repository_name = serializer.validated_data["repository"]
         question = serializer.validated_data["question"]
-        repository = Repository.objects.get(
+
+
+        repository = get_object_or_404(
+            Repository,
             user=request.user,
             collection_name=repository_name
         )
-        session_id = serializer.validated_data.get("session_id")
+
+        
+        session_id = request.data.get("session_id")
 
         if session_id:
-
-            session = ChatSession.objects.get(
+            session = get_object_or_404(
+                ChatSession,
                 id=session_id,
                 user=request.user
             )
-
         else:
-
             session = ChatSession.objects.create(
                 user=request.user,
                 repository=repository,
                 title=question[:50]
             )
 
+        
+        
+
+        
+        previous_messages = ChatMessage.objects.filter(
+            session=session
+        ).order_by("created_at")
+
+        memory = ""
+
+        for msg in previous_messages:
+            role = "User" if msg.sender == "user" else "Assistant"
+            memory += f"{role}: {msg.message}\n\n"
+
         ChatMessage.objects.create(
             session=session,
             sender="user",
             message=question
         )
-        memory = get_memory(session)
+
         
+        state = {
+            "repository": repository_name,
+            "question": question,
+            "intent": "",
+            "answer": "",
+            "route": "",
+            "sources": [],
+            "memory": memory,
+            "plan": [],
+            "history": [],
+            "current_step": 0,
 
-        result = ask_repository(repository_name, question,memory)
+        }
 
+        
+        try:
+
+            result = graph.invoke(state)
+            request.session["last_debug"] = {
+                "trace": result.get("trace", []),
+                "metrics": result.get("metrics", {}),
+                "plan": result.get("plan", []),
+                "history": result.get("history", [])
+            }
+
+        except Exception as e:
+
+            print(e)
+
+            return Response(
+                {
+                    "error": str(e)
+                },
+                status=500
+            )
+
+
+        answer = result.get(
+            "answer",
+            "No answer generated."
+        )
+
+        sources = result.get(
+            "sources",
+            []
+        )
+
+        print("=" * 60)
+        print("GRAPH RESULT")
+        print(result)
+        print("=" * 60)
         ChatMessage.objects.create(
             session=session,
             sender="ai",
-            message=result["answer"]
+            message=answer
         )
 
-        return Response({
-            "answer": result["answer"],
-            "sources": result["sources"],
-            "session_id": session.id
-        })
+        return Response(
+            {
+                "answer": answer,
+                "sources": sources,
+                "session_id": session.id,
+            }
+        )
     
 class RepositoryTreeView(APIView):
 
@@ -249,12 +319,10 @@ class ChatMessagesAPIView(APIView):
 
     def get(self, request, session_id):
 
-        session = ChatSession.objects.get(
-
+        session = get_object_or_404(
+            ChatSession,
             id=session_id,
-
             user=request.user
-
         )
 
         messages = ChatMessage.objects.filter(
@@ -287,12 +355,10 @@ class DeleteChatAPIView(APIView):
 
     def delete(self, request, session_id):
 
-        session = ChatSession.objects.get(
-
+        session = get_object_or_404(
+            ChatSession,
             id=session_id,
-
             user=request.user
-
         )
 
         session.delete()
@@ -303,7 +369,6 @@ class DeleteChatAPIView(APIView):
 
         })
     
-
 class RenameChatAPIView(APIView):
 
     permission_classes = [
@@ -314,12 +379,10 @@ class RenameChatAPIView(APIView):
 
     def put(self, request, session_id):
 
-        session = ChatSession.objects.get(
-
+        session = get_object_or_404(
+            ChatSession,
             id=session_id,
-
             user=request.user
-
         )
 
         session.title = request.data["title"]
@@ -498,3 +561,53 @@ class DeleteRepositoryAPIView(APIView):
         },
         status=status.HTTP_200_OK
         )
+    
+
+class DashboardAPIView(APIView):
+
+    def get(self, request):
+
+        repositories = Repository.objects.count()
+
+        sessions = ChatSession.objects.count()
+
+        messages = ChatMessage.objects.count()
+
+        answers = ChatMessage.objects.filter(
+            sender="ai"
+        ).count()
+
+        top_repo = (
+            ChatSession.objects
+            .values("repository")
+            .annotate(total=Count("id"))
+            .order_by("-total")
+            .first()
+        )
+
+        return Response({
+
+            "repositories": repositories,
+
+            "sessions": sessions,
+
+            "messages": messages,
+
+            "answers": answers,
+
+            "top_repository":
+                top_repo["repository"]
+                if top_repo
+                else "-"
+
+        })
+    
+class DebugAPIView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        debug = request.session.get("last_debug", {})
+
+        return Response(debug)

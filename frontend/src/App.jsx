@@ -8,6 +8,7 @@ import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Repositories from "./pages/Repositories";
 import RepositoryDetails from "./pages/RepositoryDetails";
+import DebugDashboard from "./pages/DebugDashboard";
 function App() {
     return (
         <Routes>
@@ -19,6 +20,7 @@ function App() {
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>}/>
             <Route path="/repositories" element={<ProtectedRoute><Repositories/></ProtectedRoute>}/>
             <Route path="/repositories/:id" element={<ProtectedRoute><RepositoryDetails/></ProtectedRoute>}/>
+            <Route path="/debug" element={<DebugDashboard />} />
         </Routes>
 );
 }

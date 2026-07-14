@@ -3,16 +3,12 @@ from tools.planner import plan_tool
 from tools.security_agent import security_agent
 from tools.file_reader_agent import explain_file
 from tools.code_search_agent import explain_search
-from tools.dependency_agent import dependency_agent
 from tools.project_structure_agent import architecture_agent
-from tools.github_agent import github_agent
 from tools.code_metrics_agent import code_metrics_agent
 from tools.file_compare_agent import compare_agent
-from tools.dead_code_agent import dead_code_agent
 from tools.uml_agent import uml_agent
 from tools.database_agent import database_agent
 from tools.execution_agent import execution_agent
-
 from tools.utils import extract_filename
 from tools.extract_files import extract_two_files
 from tools.extract_filename import extract_python_file
@@ -35,7 +31,6 @@ SIMPLE_TOOLS = {
     "architecture": architecture_agent,
     "github": github_agent,
     "metrics": code_metrics_agent,
-    "dead_code": dead_code_agent,
     "uml": uml_agent,
     "database": database_agent,
 }
@@ -130,6 +125,9 @@ def execute_tool(repository, question, forced_tool=None):
                 question
             )
 
+            if answer is None:
+                answer = "No relevant information was found."
+
             sources = []
 
         # ======================================================
@@ -154,6 +152,12 @@ def execute_tool(repository, question, forced_tool=None):
                 },
                 status="success"
             )
+
+        print("=" * 60)
+        print("TOOL :", tool)
+        print("ANSWER TYPE :", type(answer))
+        print("ANSWER :", answer)
+        print("=" * 60)
 
         return answer, sources
 
